@@ -88,7 +88,7 @@ cat > azuredeploy.parameters.json << EOF
         "contentVersion": "1.0.0.0",
         "parameters": {
                 "_artifactsLocation": {
-                        "value": "https://raw.githubusercontent.com/mglantz/ocp37-azure-cns/master/"
+                        "value": "https://raw.githubusercontent.com/mglantz/ocp37-azure-simple/master/"
                 },
                 "masterVmSize": {
                         "value": "Standard_DS4_v2"
@@ -113,9 +113,6 @@ cat > azuredeploy.parameters.json << EOF
 		},
 		"dataDiskSize": {
 			"value": $DISKSIZE
-		},
-		"dataDiskSizeCns": {
-			"value": $DISKSIZECNS
 		},
 		"adminUsername": {
 			"value": "$OCP_USER"
@@ -163,6 +160,7 @@ azure group create $GROUP $LOCATION
 azure keyvault create -u ${GROUP}KeyVaultName -g $GROUP -l $LOCATION
 
 # Put SSH private key in key vault
+# FIXME: Add option to use arbitrary key here
 azure keyvault secret set -u ${GROUP}KeyVaultName -s ${GROUP}SecretName --file ~/.ssh/id_rsa
 
 # Enable key vault to be used for deployment
@@ -190,7 +188,3 @@ echo "You can SSH into the cluster by accessing it's bastion host: ssh $(azure n
 echo "Once your SSH key has been distributed to all nodes, you can then jump passwordless from the bastion host to all nodes."
 echo "To SSH directly to the master, use port 2200: ssh $MASTER_DNS.${LOCATION}.cloudapp.azure.com -p 2200"
 echo "For troubleshooting, check out /var/lib/waagent/custom-script/download/[0-1]/stdout or stderr on the nodes"
-
-
-
-
