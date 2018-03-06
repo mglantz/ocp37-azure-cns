@@ -88,7 +88,7 @@ cat > azuredeploy.parameters.json << EOF
         "contentVersion": "1.0.0.0",
         "parameters": {
                 "_artifactsLocation": {
-                        "value": "https://raw.githubusercontent.com/mglantz/ocp37-azure-simple/master/"
+                        "value": "https://raw.githubusercontent.com/mglantz/ocp37-azure-cns/master/"
                 },
                 "masterVmSize": {
                         "value": "Standard_DS4_v2"
@@ -113,6 +113,9 @@ cat > azuredeploy.parameters.json << EOF
 		},
 		"dataDiskSize": {
 			"value": $DISKSIZE
+		},
+		"dataDiskSizeCns": {
+			"value": $DISKSIZECNS
 		},
 		"adminUsername": {
 			"value": "$OCP_USER"
@@ -160,7 +163,6 @@ azure group create $GROUP $LOCATION
 azure keyvault create -u ${GROUP}KeyVaultName -g $GROUP -l $LOCATION
 
 # Put SSH private key in key vault
-# FIXME: Add option to use arbitrary key here
 azure keyvault secret set -u ${GROUP}KeyVaultName -s ${GROUP}SecretName --file ~/.ssh/id_rsa
 
 # Enable key vault to be used for deployment
