@@ -104,30 +104,7 @@ cat > /home/${SUDOUSER}/postinstall3.yml <<EOF
     shell: echo "${PASSWORD}"|passwd root --stdin
 EOF
 
-if [ $MASTERCOUNT -eq 1 ]
-then
-# Run on master
-cat > /home/${SUDOUSER}/postinstall4.yml <<EOF
----
-- hosts: masters
-  remote_user: ${SUDOUSER}
-  become: yes
-  become_method: sudo
-  vars:
-    description: "Unset default registry DNS name"
-  tasks:
-  - name: copy atomic-openshift-master file
-    copy:
-      src: /tmp/atomic-openshift-master
-      dest: /etc/sysconfig/atomic-openshift-master
-      owner: root
-      group: root
-      mode: 0644
-  - name: restart master
-    shell: systemctl restart atomic-openshift-master
-EOF
-else
-# HA setup. Run on all masters
+# Run on all masters
 cat > /home/${SUDOUSER}/postinstall4.yml <<EOF
 ---
 - hosts: masters
@@ -145,8 +122,6 @@ cat > /home/${SUDOUSER}/postinstall4.yml <<EOF
       group: root
       mode: 0644
 EOF
-fi
-
 # Create Ansible Hosts File
 echo $(date) " - Create Ansible Hosts file"
 
@@ -265,6 +240,7 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 openshift_hosted_registry_storage_kind=nfs
 openshift_hosted_registry_storage_access_modes=['ReadWriteMany']
 openshift_hosted_registry_storage_host=$MASTER-0.$DOMAIN
+openshift_hosted_registry_storage_nfs_options='*(rw,root_squash)'
 openshift_hosted_registry_storage_nfs_directory=/exports
 openshift_hosted_registry_storage_volume_name=registry
 openshift_hosted_registry_storage_volume_size=5Gi
@@ -276,20 +252,34 @@ openshift_hosted_metrics_deploy=true
 openshift_hosted_metrics_storage_kind=nfs
 openshift_hosted_metrics_storage_access_modes=['ReadWriteOnce']
 openshift_hosted_metrics_storage_host=$MASTER-0.$DOMAIN
+openshift_metrics_storage_nfs_options='*(rw,root_squash)'
 openshift_hosted_metrics_storage_nfs_directory=/exports
 openshift_hosted_metrics_storage_volume_name=metrics
 openshift_hosted_metrics_storage_volume_size=10Gi
-openshift_hosted_metrics_public_url=https://hawkular-metrics.$ROUTING/hawkular/metrics
+openshift_hosted_metrics_public_url=hawkular-metrics.$ROUTING
 
 # Setup logging
-openshift_hosted_logging_deploy=true
-openshift_hosted_logging_storage_kind=nfs
-openshift_hosted_logging_storage_access_modes=['ReadWriteOnce']
-openshift_hosted_logging_storage_host=$MASTER-0.$DOMAIN
-openshift_hosted_logging_storage_nfs_directory=/exports
-openshift_hosted_logging_storage_volume_name=logging
-openshift_hosted_logging_storage_volume_size=10Gi
-openshift_master_logging_public_url=https://kibana.$ROUTING
+openshift_logging_install_logging=true
+openshift_logging_storage_kind=nfs
+openshift_logging_storage_access_modes=['ReadWriteOnce']
+openshift_logging_storage_host=$MASTER-0.$DOMAIN
+openshift_logging_storage_nfs_directory=/exports
+openshift_logging_storage_nfs_options='*(rw,root_squash)'
+openshift_logging_storage_volume_name=logging
+openshift_logging_storage_volume_size=10Gi
+openshift_logging_storage_labels={'storage': 'logging'}
+openshift_logging_kibana_hostname=kibana.$ROUTING
+openshift_logging_master_public_url=https://$MASTERPUBLICIPHOSTNAME:8443
+
+# Setup storage for etcd2, for the new Service Broker
+openshift_hosted_etcd_storage_kind=nfs
+openshift_hosted_etcd_storage_nfs_options="*(rw,root_squash,sync,no_wdelay)"
+openshift_hosted_etcd_storage_host=$MASTER-0.$DOMAIN
+openshift_hosted_etcd_storage_nfs_directory=/exports
+openshift_hosted_etcd_storage_volume_name=etcd-vol2 
+openshift_hosted_etcd_storage_access_modes=["ReadWriteOnce"]
+openshift_hosted_etcd_storage_volume_size=1G
+openshift_hosted_etcd_storage_labels={'storage': 'etcd'}
 
 # host group for masters
 [masters]
